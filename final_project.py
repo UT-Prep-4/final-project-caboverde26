@@ -38,7 +38,7 @@ class Wall(pygame.sprite.Sprite):
     def __init__(self, x, y, size):
         super().__init__()
         self.image = pygame.Surface((size, size))
-        self.image.fill("blue") 
+        self.image.fill("white") 
         pygame.draw.rect(self.image, (35, 45, 60), (0, 0, size, size), 2)
         self.rect = self.image.get_rect()
         self.rect.x = x
@@ -128,7 +128,7 @@ while running:
     if pygame.sprite.collide_rect(player, goal):
         build_new_level() 
 
-    screen.fill("lightgreen") 
+    screen.fill("black") 
     all_sprites.draw(screen)
     
     pygame.display.flip()
