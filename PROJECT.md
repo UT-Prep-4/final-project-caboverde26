@@ -11,4 +11,4 @@ Run python final_project.py in the terminal, then open port "Game Desktop (6080)
 The code uses the Pygame library and creates sprites for the player and walls. The hardest part of the code was probably randomly generating the walls. The code works by randomly building the walls by using depth first search.
 
 ## Built by
-Anish Yadavalli, Gary Liu, Arjun Selvaraju, Isaac Chandy
+Anish Yadavalli: lead coder, wrote description of project, Gary Liu: coder, planner, Arjun Selvaraju: coder, planner, Isaac Chandy: coder, wrote description of project.
