@@ -1,67 +1,137 @@
-#Name(s):
-#Final Project - Build Something Worth Showing Off
-'''
-This is the big one. At the end of camp you will demo this project at the
-SHOWCASE, and it should be good enough to put on a resume or mention in a
-college application. That means it is not just "code that works." It is a
-project you designed, built, polished, and can explain.
+import pygame
+import random
 
-WHAT MAKES IT SHOWCASE-WORTHY (the autograder checks for these):
-  1. ORGANIZED: your code is split into clear, purposeful segments (functions optional), not one
-     giant blob. (Aim for at least 3-4 functions with real jobs.)
-  2. SUBSTANTIAL: this is a multi-day build, bigger than the mini-project.
-  3. REAL LOGIC: decisions (if/elif/else) and repetition (loops) working together.
-  4. DOCUMENTED: fill out PROJECT.md so a stranger (or a college admissions
-     reader!) can understand what you built and how to run it.
+pygame.init()
 
-Whether it is impressive, creative, and demo-ready is judged by humans at
-showcase, not by the autograder.
+TILE_SIZE = 20
+COLS, ROWS = 72, 35  
+SCREEN_WIDTH = COLS * TILE_SIZE
+SCREEN_HEIGHT = ROWS * TILE_SIZE
 
-============================= PICK YOUR TRACK =================================
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+clock = pygame.time.Clock()
 
-TRACK A: IMAGE PROCESSING PROGRAM
-  Build a program that opens an image and transforms it with a special
-  function you write yourself: brightness adjustment, a color filter overlay,
-  grayscale, mirror, pixelate, or invent your own effect.
-  The Pillow library is preinstalled. The core moves:
+def generate_maze(cols, rows):
+    grid = [[1 for _ in range(cols)] for _ in range(rows)]
+    visited = set()
+    def carve_path(cx, cy):
+        visited.add((cx, cy))
+        grid[cy][cx] = 0
+        
+        directions = [(0, -2), (0, 2), (-2, 0), (2, 0)]
+        random.shuffle(directions)
+        
+        for dx, dy in directions:
+            nx, ny = cx + dx, cy + dy
+            if 0 < nx < cols - 1 and 0 < ny < rows - 1 and (nx, ny) not in visited:
+                grid[cy + dy//2][cx + dx//2] = 0
+                carve_path(nx, ny)
 
-      from PIL import Image
-      img = Image.open("photo.png")
-      width, height = img.size
-      pixel = img.getpixel((x, y))          # (red, green, blue), each 0-255
-      img.putpixel((x, y), (r, g, b))       # set a pixel
-      img.save("output.png")                # then click it in VS Code to view!
+    carve_path(1, 1)
+    
+    grid[rows - 2][1] = 0 
+    grid[1][cols - 2] = 0 
+    
+    return grid
 
-  Brightness is a for loop over every pixel that multiplies r, g, b by a
-  factor the user chooses (careful: values must stay between 0 and 255).
-  A filter overlay nudges every pixel toward a color (add red, drop blue...).
-  Level up: ask the user which effect to apply with input(), show a menu,
-  process any image file they name, draw the result with turtle or pygame.
+class Wall(pygame.sprite.Sprite):
+    def __init__(self, x, y, size):
+        super().__init__()
+        self.image = pygame.Surface((size, size))
+        self.image.fill("white") 
+        pygame.draw.rect(self.image, (35, 45, 60), (0, 0, size, size), 2)
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
 
-TRACK B: ADVENTURE GAME
-  Build a text adventure where the player explores, makes choices, and wins
-  or loses based on decisions and luck. Use random for surprises: treasure,
-  traps, enemy encounters, dice rolls, critical hits.
-  The shape of it: one function per location or scene, input() for choices,
-  an inventory list, health or gold as numbers, and random.randint() for
-  the unexpected. Level up: turn-based combat, a map, multiple endings,
-  ASCII art title screens, a save-your-score high score.
+class Goal(pygame.sprite.Sprite):
+    def __init__(self, x, y, size):
+        super().__init__()
+        self.image = pygame.Surface((size, size))
+        self.image.fill((46, 204, 113)) 
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
 
-TRACK C: YOUR OWN IDEA
-  A bigger game (pygame or turtle), a quiz app, a tool that solves a real
-  problem you have, a simulation, generative turtle art... Pitch it to your
-  instructor FIRST, then build it. The four requirements above still apply.
+class Player(pygame.sprite.Sprite):
+    def __init__(self, x, y, size):
+        super().__init__()
+        self.image = pygame.Surface((size - 8, size - 8)) 
+        self.image.fill("red") 
+        self.rect = self.image.get_rect()
+        self.rect.x = x + 100
+        self.rect.y = y + 100
+        self.speed = 20
 
-=============================== PLAN FIRST ====================================
-Before you write code, fill this in (it will keep you honest all week):
+    def move(self, dx, dy, walls_group):
+        self.rect.x += dx
+        hit_list = pygame.sprite.spritecollide(self, walls_group, False)
+        for wall in hit_list:
+            if dx > 0: self.rect.right = wall.rect.left
+            if dx < 0: self.rect.left = wall.rect.right
+        self.rect.y += dy
+        hit_list = pygame.sprite.spritecollide(self, walls_group, False)
+        for wall in hit_list:
+            if dy > 0: self.rect.bottom = wall.rect.top
+            if dy < 0: self.rect.top = wall.rect.bottom
 
-  MY PROJECT: (one sentence)
-  THE PIECES I NEED TO BUILD: (list 3-6 functions or parts)
-  WHAT I WILL DEMO AT SHOWCASE: (the 60-second version)
+all_sprites = pygame.sprite.Group()
+walls_group = pygame.sprite.Group()
 
-==============================================================================
-Build your project below (and split it into more .py files if it gets big;
-the grader reads all of them). Delete this line and start!
-'''
+SPAWN_X, SPAWN_Y = 1 * TILE_SIZE, (ROWS - 2) * TILE_SIZE
+GOAL_X, GOAL_Y = (COLS - 2) * TILE_SIZE, 1 * TILE_SIZE
 
-print("My final project is not built yet!")
+player = Player(SPAWN_X, SPAWN_Y, TILE_SIZE)
+goal = Goal(GOAL_X, GOAL_Y, TILE_SIZE)
+
+def build_new_level():
+    all_sprites.empty()
+    walls_group.empty()
+    
+    maze_layout = generate_maze(COLS, ROWS)
+    
+    for r_idx, row in enumerate(maze_layout):
+        for c_idx, cell in enumerate(row):
+            if cell == 1:
+                wall = Wall(c_idx * TILE_SIZE, r_idx * TILE_SIZE, TILE_SIZE)
+                walls_group.add(wall)
+                all_sprites.add(wall)
+                
+    all_sprites.add(goal)
+    all_sprites.add(player)
+    
+    player.rect.x = SPAWN_X + 4
+    player.rect.y = SPAWN_Y + 4
+
+build_new_level()
+
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    keys = pygame.key.get_pressed()
+    dx, dy = 0, 0
+    if keys[pygame.K_LEFT] or keys[pygame.K_a]:  
+        dx = -player.speed
+    if keys[pygame.K_RIGHT] or keys[pygame.K_d]: 
+        dx = player.speed
+    if keys[pygame.K_UP] or keys[pygame.K_w]:    
+        dy = -player.speed
+    if keys[pygame.K_DOWN] or keys[pygame.K_s]:  
+        dy = player.speed
+
+    if dx != 0 or dy != 0:
+        player.move(dx, dy, walls_group)
+
+    if pygame.sprite.collide_rect(player, goal):
+        build_new_level() 
+
+    screen.fill("black") 
+    all_sprites.draw(screen)
+    
+    pygame.display.flip()
+    clock.tick(60)
+
+pygame.quit()
